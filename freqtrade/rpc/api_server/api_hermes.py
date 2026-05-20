@@ -213,7 +213,7 @@ async def _stream_chat(
 
     # Stream from DeepSeek
     body = {
-        "model": "deepseek-v4-pro",
+        "model": "deepseek-chat",
         "messages": messages,
         "temperature": 0.3,
         "max_tokens": 2048,
@@ -658,6 +658,13 @@ async def api_ma_analyze(req: MAAnalysisRequest):
 
 {rag_context}
 
+## 💰 标的方已知财务数据 (来自并购方案文档)
+
+- **业绩预测**: 2025年预计净利润 5,200万元 → 2027年 10,500万元 → 2028年 11,500万元
+- **可比估值**: 同类IDC/算力资产交易市盈率 41.17倍
+- **协同收益**: 福能投资导入政企客户可带动年营收增长15%+，带宽优惠年省300万元
+- **远期目标**: 方案(二)预计远期净利润可达 2.1亿元
+
 ## 📋 任务
 
 请按照你的五维度分析框架，对收购方({acquirer_name})收购标的({req.target or '请从文档中识别'})进行{'全流程' if req.stage == 'full' else req.stage + '阶段'}分析。
@@ -678,7 +685,7 @@ async def api_ma_analyze(req: MAAnalysisRequest):
 
     async def _stream():
         body = {
-            "model": "deepseek-v4-pro",
+            "model": "deepseek-chat",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"请对 {acquirer_name} 收购 {req.target or '标的公司'} 进行{'全流程M&A并购' if req.stage == 'full' else req.stage + '阶段'}分析。"},
