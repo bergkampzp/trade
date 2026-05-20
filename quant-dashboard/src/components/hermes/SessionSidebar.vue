@@ -11,8 +11,20 @@
         :key="s.id"
         :class="['session-item', { active: s.id === store.currentSessionId }]"
         @click="store.openSession(s.id)"
+        @dblclick="startRename(s)"
       >
-        <span class="session-title">{{ s.title || '新对话' }}</span>
+        <span v-if="renaming === s.id" class="session-title">
+          <input
+            ref="renameInput"
+            v-model="renameText"
+            class="rename-input"
+            @blur="confirmRename"
+            @keydown.enter="confirmRename"
+            @keydown.escape="renaming = null"
+            @click.stop
+          />
+        </span>
+        <span v-else class="session-title">{{ s.title || '新对话' }}</span>
         <span class="session-meta">{{ s.message_count }} 条 · {{ fmtTime(s.updated_at) }}</span>
         <button class="btn-delete" @click.stop="store.removeSession(s.id)" title="删除">×</button>
       </button>
@@ -27,9 +39,31 @@
 </template>
 
 <script setup lang="ts">
+import { ref, nextTick } from 'vue'
 import { useHermesStore } from '../../stores/hermes'
+import type { SessionSummary } from '../../types/hermes'
 
 const store = useHermesStore()
+const renaming = ref<string | null>(null)
+const renameText = ref('')
+const renameInput = ref<HTMLInputElement | null>(null)
+
+function startRename(s: SessionSummary) {
+  renaming.value = s.id
+  renameText.value = s.title || '新对话'
+  nextTick(() => {
+    const el = document.querySelector('.rename-input') as HTMLInputElement
+    el?.focus()
+    el?.select()
+  })
+}
+
+function confirmRename() {
+  if (renaming.value && renameText.value.trim()) {
+    store.renameCurrent(renameText.value.trim())
+  }
+  renaming.value = null
+}
 
 function fmtTime(ts: string): string {
   if (!ts) return ''
@@ -122,6 +156,17 @@ function fmtTime(ts: string): string {
 }
 .session-item:hover .btn-delete { opacity: 1; }
 .btn-delete:hover { color: #ef4444; }
+
+.rename-input {
+  width: 100%;
+  background: #0f1729;
+  border: 1px solid #6366f1;
+  border-radius: 4px;
+  color: #e2e8f0;
+  padding: 2px 6px;
+  font-size: 14px;
+  outline: none;
+}
 
 .sidebar-footer {
   padding: 10px 12px;

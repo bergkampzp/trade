@@ -83,6 +83,16 @@ export const useHermesStore = defineStore('hermes', () => {
     }
   }
 
+  async function renameCurrent(title: string) {
+    if (!currentSessionId.value) return
+    try {
+      await api.renameSession(currentSessionId.value, title)
+      await loadSessions()
+    } catch (e) {
+      console.error('renameSession:', e)
+    }
+  }
+
   function sendMessage(text: string) {
     if (!text.trim()) return
     if (status.value === 'streaming') return
@@ -171,7 +181,7 @@ export const useHermesStore = defineStore('hermes', () => {
     skills, sessions, currentSessionId, messages, status,
     selectedSkill, citations, errorMessage, streamBuffer,
     currentSkill, currentSession,
-    loadSkills, loadSessions, newSession, openSession, removeSession,
+    loadSkills, loadSessions, newSession, openSession, removeSession, renameCurrent,
     sendMessage, selectSkill, clearMessages,
   }
 })

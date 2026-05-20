@@ -95,6 +95,25 @@ function selectAgent(name: string | null) {
 function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
+
+  // ── Slash Commands ──
+  if (text === '/new') {
+    store.newSession()
+    inputText.value = ''
+    return
+  }
+  if (text === '/clear') {
+    store.clearMessages()
+    inputText.value = ''
+    return
+  }
+  if (text === '/stop') {
+    abortCtrl?.abort()
+    store.status = 'ready'
+    inputText.value = ''
+    return
+  }
+
   inputText.value = ''
 
   // Upload files first

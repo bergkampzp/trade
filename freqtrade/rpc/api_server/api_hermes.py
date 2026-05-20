@@ -536,3 +536,35 @@ async def api_upload(file: UploadFile = File(...)):
     except Exception as e:
         logger.exception("Upload/index failed")
         raise HTTPException(500, f"索引失败: {e}")
+
+
+# ── Sprint 3: 会话管理增强 ─────────────────────────────────────────────
+
+
+class RenameRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=100)
+
+
+@router.put("/session/{sid}/rename")
+def api_session_rename(sid: str, req: RenameRequest):
+    """重命名会话。"""
+    _ensure_sessions_table()
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE quant_raw_cn.hermes_sessions SET title=%s, updated_at=NOW() WHERE id=%s",
+            (req.title, sid),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(404, "会话不存在")
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "renamed", "session_id": sid, "title": req.title}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"重命名失败: {e}")
+
+

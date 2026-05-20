@@ -41,6 +41,15 @@ export async function deleteSession(sid: string): Promise<void> {
   if (!res.ok) throw new Error(`Delete session: ${res.status}`)
 }
 
+export async function renameSession(sid: string, title: string): Promise<void> {
+  const res = await fetch(`${BASE}/session/${sid}/rename`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify({ title }),
+  })
+  if (!res.ok) throw new Error(`Rename: ${res.status}`)
+}
+
 export async function appendMessage(sid: string, msg: { role: string; content: string; skill?: string }): Promise<void> {
   const res = await fetch(`${BASE}/session/${sid}/append`, {
     method: 'POST',
