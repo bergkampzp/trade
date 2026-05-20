@@ -1,0 +1,189 @@
+# Factor registry for Sprint 2+3 research loop.
+# Each factor maps to a dbt feature model (models/features/feat_<name>.sql)
+# and a z-score column in mart_hourly_signals.
+#
+# To add a new factor:
+#   1. Create models/features/feat_<name>.sql
+#   2. Add an entry here
+#   3. Add JOIN + z-score column in mart_hourly_signals.sql
+
+factors:
+  # --- Bucket A: stock-classic (existing Sprint 1) ---
+  - name: momentum_24h
+    bucket: A
+    feature_model: feat_momentum_24h
+    raw_column: momentum_24h
+    zscore_column: z_mom24
+    direction: positive
+    description: "24h trailing return (close/close_24h_ago - 1)"
+
+  - name: lowvol_24h
+    bucket: A
+    feature_model: feat_volatility_24h
+    raw_column: volatility_24h
+    zscore_column: z_lowvol24
+    direction: negative
+    description: "24h rolling stddev of 1h returns (lower = better)"
+
+  - name: volume_zscore_24h
+    bucket: A
+    feature_model: feat_volume_zscore_24h
+    raw_column: volume_zscore_24h
+    zscore_column: z_volume
+    direction: positive
+    description: "24h volume sum z-scored vs 30d mean"
+
+  # --- Bucket A: stock-classic (new Sprint 2) ---
+  - name: momentum_7d
+    bucket: A
+    feature_model: feat_momentum_7d
+    raw_column: momentum_7d
+    zscore_column: z_mom7d
+    direction: positive
+    description: "7d (168h) trailing return"
+
+  - name: momentum_30d
+    bucket: A
+    feature_model: feat_momentum_30d
+    raw_column: momentum_30d
+    zscore_column: z_mom30d
+    direction: positive
+    description: "30d (720h) trailing return"
+
+  - name: reversal_1h
+    bucket: A
+    feature_model: feat_reversal_1h
+    raw_column: reversal_1h
+    zscore_column: z_rev1h
+    direction: positive
+    description: "Negated 1h return (mean-reversion signal)"
+
+  - name: reversal_24h
+    bucket: A
+    feature_model: feat_reversal_24h
+    raw_column: reversal_24h
+    zscore_column: z_rev24h
+    direction: positive
+    description: "Negated 24h return (mean-reversion signal)"
+
+  - name: lowvol_7d
+    bucket: A
+    feature_model: feat_lowvol_7d
+    raw_column: lowvol_7d
+    zscore_column: z_lowvol7d
+    direction: negative
+    description: "7d (168h) rolling stddev of 1h returns (lower = better)"
+
+  - name: rsi_14
+    bucket: A
+    feature_model: feat_rsi_14
+    raw_column: rsi_14
+    zscore_column: z_rsi14
+    direction: positive
+    description: "14-hour RSI"
+
+  - name: bollinger_pos_24h
+    bucket: A
+    feature_model: feat_bollinger_pos_24h
+    raw_column: bollinger_pos_24h
+    zscore_column: z_boll
+    direction: positive
+    description: "Position within 24h Bollinger Band (-1 to +1)"
+
+  # --- Bucket C: microstructure ---
+  - name: amihud_24h
+    bucket: C
+    feature_model: feat_amihud_24h
+    raw_column: amihud_24h
+    zscore_column: z_amihud
+    direction: negative
+    description: "Amihud illiquidity ratio 24h avg (lower = more liquid)"
+
+  - name: garman_klass_24h
+    bucket: C
+    feature_model: feat_garman_klass_24h
+    raw_column: garman_klass_24h
+    zscore_column: z_gk
+    direction: negative
+    description: "Garman-Klass volatility estimator 24h avg"
+
+  - name: vol_price_divergence_24h
+    bucket: C
+    feature_model: feat_vol_price_divergence_24h
+    raw_column: vol_price_divergence_24h
+    zscore_column: z_vpd
+    direction: negative
+    description: "24h rolling correlation between return and volume change"
+
+  - name: mfi_14
+    bucket: C
+    feature_model: feat_mfi_14
+    raw_column: mfi_14
+    zscore_column: z_mfi
+    direction: positive
+    description: "14-hour Money Flow Index"
+
+  # --- Bucket B: macro economic (Sprint 3) ---
+  - name: cpi_yoy
+    bucket: B
+    feature_model: feat_cpi_yoy
+    raw_column: cpi_yoy
+    zscore_column: z_cpi
+    direction: negative
+    description: "CPI level (higher inflation → risk-off → crypto pressure)"
+
+  - name: fed_rate
+    bucket: B
+    feature_model: feat_fed_rate
+    raw_column: fed_rate
+    zscore_column: z_fedrate
+    direction: negative
+    description: "Federal Funds Rate (higher rate → tighter liquidity)"
+
+  - name: yield_spread
+    bucket: B
+    feature_model: feat_yield_spread
+    raw_column: yield_spread
+    zscore_column: z_yldspd
+    direction: positive
+    description: "10Y-2Y Treasury spread (wider → healthier economy → risk-on)"
+
+  - name: vix
+    bucket: B
+    feature_model: feat_vix
+    raw_column: vix
+    zscore_column: z_vix
+    direction: negative
+    description: "CBOE VIX index (higher → fear → crypto correlated sell-off)"
+
+  - name: dxy
+    bucket: B
+    feature_model: feat_dxy
+    raw_column: dxy
+    zscore_column: z_dxy
+    direction: negative
+    description: "Trade-weighted USD index (stronger dollar → crypto pressure)"
+
+  - name: pmi
+    bucket: B
+    feature_model: feat_pmi
+    raw_column: pmi
+    zscore_column: z_pmi
+    direction: positive
+    description: "US Leading Index (ISM PMI proxy, signals economic expansion/contraction)"
+
+  - name: news_sentiment
+    bucket: B
+    feature_model: feat_news_sentiment
+    raw_column: news_sentiment
+    zscore_column: z_newssent
+    direction: positive
+    description: "FinBERT crypto news net sentiment score (positive → bullish)"
+
+  - name: news_volume
+    bucket: B
+    feature_model: feat_news_volume
+    raw_column: news_volume
+    zscore_column: z_newsvol
+    direction: negative
+    description: "Hourly crypto news article count (abnormal volume → volatility)"

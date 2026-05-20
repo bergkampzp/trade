@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  tradingagents:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tradingagents-cn:latest
+    container_name: tradingagents-api
+    ports:
+      - "8000:8000"
+    environment:
+      # LLM 配置
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      # PostgreSQL 配置
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_DATABASE=${PG_DATABASE:-quant_research}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_PASSWORD=${PG_PASSWORD:-postgres}
+      - PG_SCHEMA=${PG_SCHEMA:-public}
+      # 应用配置
+      - CONFIG_DIR=/app/config
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - trading-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: tradingagents-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${PG_DATABASE:-quant_research}
+      - POSTGRES_USER=${PG_USER:-postgres}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-postgres}
+      - TZ=Asia/Shanghai
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+networks:
+  trading-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local

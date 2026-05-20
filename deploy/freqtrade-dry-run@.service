@@ -1,0 +1,56 @@
+# systemd template unit for AI-generated strategy dry-run execution
+# Usage: systemctl start freqtrade-dry-run@<strategy_id>.service
+#
+# Installed at: /etc/systemd/system/freqtrade-dry-run@.service
+# Configuration: /etc/freqtrade/dry-run/%i.json (strategy_id per instance)
+
+[Unit]
+Description=Freqtrade Dry-Run — AI Strategy %i
+After=network.target
+Documentation=https://www.freqtrade.io/
+
+[Service]
+Type=simple
+User=freqtrade
+Group=freqtrade
+
+# ---- Security hardening ----
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/freqtrade/user_data/strategies/generated
+
+# Allow only outbound connections to exchange APIs
+RestrictAddressFamilies=AF_INET AF_INET6
+
+# ---- Resource limits ----
+MemoryMax=512M
+CPUQuota=50%
+TasksMax=20
+
+# ---- Working directory ----
+WorkingDirectory=/opt/freqtrade
+
+# ---- Command ----
+# Uses instance-specific config: /etc/freqtrade/dry-run/%i.json
+# Strategies are loaded from: /var/lib/freqtrade/user_data/strategies/generated/
+ExecStart=/opt/freqtrade/.venv/bin/freqtrade trade \
+    --config /etc/freqtrade/config-base.json \
+    --config /etc/freqtrade/dry-run/%i.json \
+    --dry-run \
+    --strategy-path /var/lib/freqtrade/user_data/strategies/generated
+
+# ---- Restart policy ----
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=3
+StartLimitInterval=5min
+
+# ---- Logging ----
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=freqtrade-dry-run-%i
+
+[Install]
+WantedBy=multi-user.target

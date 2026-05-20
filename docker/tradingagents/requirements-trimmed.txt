@@ -1,0 +1,46 @@
+# TradingAgents-CN 精简依赖 - 用于 Docker 容器
+# 去除了 MongoDB/Redis/前端/文档生成等依赖
+
+# 核心框架
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-multipart>=0.0.6
+httpx>=0.24.0
+
+# AI 和 LLM 框架
+openai>=1.0.0,<2.0.0
+langchain-openai>=0.3.23
+langchain-core>=0.3.0
+langchain-experimental>=0.3.4
+langgraph>=0.4.8
+
+# 数据处理
+pandas>=2.3.0
+numpy
+
+# 日志
+loguru
+
+# 环境变量
+python-dotenv>=1.0.0
+
+# HTTP 和工具
+requests>=2.32.4
+tqdm>=4.67.1
+pytz>=2025.2
+setuptools>=80.9.0
+typing-extensions>=4.14.0
+psutil>=6.1.0
+
+# 可选数据源 (按需启用)
+# akshare>=1.17.86
+# tushare>=1.4.21
+# yfinance>=0.2.63
+# baostock>=0.8.8
+
+# SQL 数据库支持 (PostgreSQL)
+asyncpg
+sqlalchemy>=2.0.0
+psycopg2-binary
