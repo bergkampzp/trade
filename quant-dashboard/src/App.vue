@@ -17,13 +17,14 @@ import SyncPanel from '@/components/sync/SyncPanel.vue'
 import AIChat from '@/components/ai/AIChat.vue'
 import TradeLab from '@/components/trade/TradeLab.vue'
 import DebateLab from '@/components/debate/DebateLab.vue'
+import HermesChat from '@/components/hermes/HermesChat.vue'
 
 const store = useQuantStore()
 const macroStore = useMacroStore()
 const syncStore = useSyncStore()
 const authError = ref('')
 const ready = ref(false)
-const activeTab = ref<'factors' | 'macro' | 'news' | 'analysis' | 'sync' | 'ai' | 'trade' | 'debate'>('factors')
+const activeTab = ref<'factors' | 'macro' | 'news' | 'analysis' | 'sync' | 'ai' | 'trade' | 'debate' | 'hermes'>('factors')
 const syncing = ref<string | null>(null)
 
 const tabs = [
@@ -35,6 +36,7 @@ const tabs = [
   { id: 'analysis' as const, label: '分析结论' },
   { id: 'sync' as const, label: '数据同步' },
   { id: 'debate' as const, label: '辩论分析' },
+  { id: 'hermes' as const, label: '🤖 AI天团' },
 ]
 
 function sleep(ms: number) {
@@ -176,6 +178,9 @@ onMounted(async () => {
       </template>
       <template v-else-if="activeTab === 'debate'">
         <DebateLab />
+      </template>
+      <template v-else-if="activeTab === 'hermes'">
+        <HermesChat />
       </template>
     </template>
   </AppLayout>

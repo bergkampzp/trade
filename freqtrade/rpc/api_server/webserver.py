@@ -127,6 +127,7 @@ class ApiServer(RPCHandler):
         from freqtrade.rpc.api_server.api_pair_history import router as api_pair_history
         from freqtrade.rpc.api_server.api_pairlists import router as api_pairlists
         from freqtrade.rpc.api_server.api_quant import router as api_quant
+        from freqtrade.rpc.api_server.api_hermes import router as api_hermes
         from freqtrade.rpc.api_server.api_rag import router as api_rag
         from freqtrade.rpc.api_server.api_trade import router as api_trade
         from freqtrade.rpc.api_server.api_v1 import router as api_v1
@@ -180,6 +181,11 @@ class ApiServer(RPCHandler):
         )
         app.include_router(
             api_debate,
+            prefix="/api/v1",
+            dependencies=[Depends(http_basic_or_jwt_token)],
+        )
+        app.include_router(
+            api_hermes,
             prefix="/api/v1",
             dependencies=[Depends(http_basic_or_jwt_token)],
         )
