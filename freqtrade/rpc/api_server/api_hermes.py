@@ -76,8 +76,28 @@ def _load_skills(force: bool = False) -> list[dict]:
                 "贵州茅台当前PE合理吗？",
                 "宁德时代的成长性估值分析",
             ]},
-        "cross-asset-comparison": {"icon": "📊", "color": "#6366f1", "label": "跨资产对比"},
-        "factor-deep-dive": {"icon": "🔍", "color": "#8b5cf6", "label": "因子深度分析"},
+        "ma-advisor": {"icon": "🤝", "color": "#8b5cf6", "label": "M&A并购顾问",
+            "suggestions": [
+                "分析安诺其收购广州烽云的标的匹配度",
+                "设计安诺其收购烽云的交易结构",
+                "安诺其收购烽云的合规审核要点有哪些？",
+                "烽云科技的尽调风险点分析",
+            ]},
+        "asset-valuator": {"icon": "📊", "color": "#f97316", "label": "资产评估专家",
+            "suggestions": [
+                "用三种方法给烽云科技估值",
+                "烽云科技的无形资产如何评估？",
+                "烽云科技业绩对赌方案设计",
+            ]},
+        "industry-researcher": {"icon": "🔬", "color": "#06b6d4", "label": "行业研究员",
+            "suggestions": [
+                "分析数码印花行业的竞争格局",
+                "安诺其和烽云的协同效应量化分析",
+                "染料行业转IDC算力的行业趋势",
+                "工业喷墨打印头的国产替代进程",
+            ]},
+        "cross-asset-comparison": {"icon": "📈", "color": "#6366f1", "label": "跨资产对比"},
+        "factor-deep-dive": {"icon": "🔍", "color": "#a78bfa", "label": "因子深度分析"},
         "macro-briefing": {"icon": "🌐", "color": "#06b6d4", "label": "宏观简报"},
         "news-impact": {"icon": "📰", "color": "#ec4899", "label": "新闻影响分析"},
         "risk-assessment": {"icon": "⚠️", "color": "#ef4444", "label": "风险评估"},
@@ -536,6 +556,181 @@ async def api_upload(file: UploadFile = File(...)):
     except Exception as e:
         logger.exception("Upload/index failed")
         raise HTTPException(500, f"索引失败: {e}")
+
+
+# ── Sprint 4: M&A 并购分析流水线 ──────────────────────────────────────
+
+
+class MAAnalysisRequest(BaseModel):
+    acquirer: str = Field("300152", description="收购方股票代码")
+    target: str = Field("", description="标的公司名称")
+    stage: str = Field("full", description="分析阶段: screening|due-diligence|valuation|structure|compliance|full")
+
+
+class MAAnalysisParams(BaseModel):
+    """M&A 分析注入的上下文字段。"""
+    acquirer_name: str = ""
+    acquirer_financials: str = ""
+    acquirer_price: str = ""
+    target_docs: list[str] = []
+    stage: str = "full"
+
+
+@router.post("/ma/analyze")
+async def api_ma_analyze(req: MAAnalysisRequest):
+    """M&A 并购全流程分析 — SSE 流式返回。"""
+    import httpx
+
+    # Load M&A advisor skill
+    all_skills = _load_skills()
+    ma_skill = None
+    for s in all_skills:
+        if s["name"] == "ma-advisor":
+            ma_skill = s
+            break
+    if not ma_skill:
+        raise HTTPException(500, "M&A advisor skill not found")
+
+    # Gather financial data for acquirer
+    acquirer_financials = ""
+    acquirer_name = ""
+    acquirer_price = ""
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        # Financial summary
+        cur.execute(
+            """SELECT report_date, report_type, total_revenue, net_profit, total_assets,
+                      shareholders_equity, roe, gross_margin, debt_ratio
+               FROM quant_raw_cn.financial_metrics
+               WHERE stock_code=%s ORDER BY report_date DESC LIMIT 8""",
+            (req.acquirer,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            # Stock name from financial_metrics
+            cur2 = conn.cursor()
+            cur2.execute("SELECT DISTINCT stock_name FROM quant_raw_cn.financial_metrics WHERE stock_code=%s LIMIT 1", (req.acquirer,))
+            name_row = cur2.fetchone()
+            acquirer_name = name_row[0] if name_row else req.acquirer
+            cur2.close()
+
+            acquirer_financials = "## 收购方财务数据\n\n| 报告期 | 类型 | 营收(万) | 净利润(万) | 总资产(万) | ROE(%) | 毛利率(%) | 负债率(%) |\n|--------|------|----------|-----------|-----------|--------|----------|----------|\n"
+            for r in rows:
+                acquirer_financials += (
+                    f"| {r[0]} | {r[1] or '-'} | {r[2]/10000:.0f} | {r[3]/10000:.0f} | "
+                    f"{r[4]/10000:.0f} | {r[5]:.1f} | {r[6]:.1f} | {r[7]:.1f} |\n"
+                )
+        # Latest price
+        cur.execute(
+            "SELECT trade_date, close FROM quant_raw_cn.akshare_daily WHERE stock_code=%s ORDER BY trade_date DESC LIMIT 1",
+            (req.acquirer,),
+        )
+        price_row = cur.fetchone()
+        if price_row:
+            acquirer_price = f"最新收盘价: ¥{price_row[1]:.2f} (日期: {price_row[0]})"
+        cur.close()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Financial data query failed: {e}")
+
+    # Gather RAG context for target
+    target_docs = []
+    if req.target:
+        chunks = _rag_retrieve(f"{acquirer_name} {req.target} 收购 并购 估值 方案", top_k=10)
+        target_docs = [c["text"] for c in chunks]
+
+    # Build system prompt
+    rag_context = ""
+    if target_docs:
+        rag_context = "\n\n## 📚 参考文档 (来自知识库)\n" + "\n---\n".join(
+            f"**[文档 {i+1}]** {doc[:800]}" for i, doc in enumerate(target_docs[:8])
+        )
+
+    system_prompt = ma_skill["system_prompt"] + f"""
+
+## 📊 当前分析上下文
+
+**收购方**: {acquirer_name} (股票代码: {req.acquirer})
+{acquirer_price}
+
+{acquirer_financials}
+
+{rag_context}
+
+## 📋 任务
+
+请按照你的五维度分析框架，对收购方({acquirer_name})收购标的({req.target or '请从文档中识别'})进行{'全流程' if req.stage == 'full' else req.stage + '阶段'}分析。
+
+注意：
+1. 所有财务数据引用自上述表格
+2. 标的方信息引用自上述参考文档 (标注 [文档N])
+3. 估值时使用实际财务数据，不可编造
+4. 合规判断需具体，引用相关法规
+"""
+
+    api_key = _resolve_api_key()
+    if not api_key:
+        raise HTTPException(500, "未配置 DeepSeek API Key")
+
+    async def _stream():
+        body = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"请对 {acquirer_name} 收购 {req.target or '标的公司'} 进行{'全流程M&A并购' if req.stage == 'full' else req.stage + '阶段'}分析。"},
+            ],
+            "temperature": 0.3,
+            "max_tokens": 4096,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+
+        # Send context info first
+        yield f"data: {json.dumps({'type': 'context', 'acquirer': acquirer_name, 'price': acquirer_price, 'docs': len(target_docs)})}\n\n"
+
+        try:
+            async with httpx.AsyncClient(timeout=180) as client:
+                async with client.stream(
+                    "POST",
+                    "https://api.deepseek.com/v1/chat/completions",
+                    json=body,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                ) as resp:
+                    if resp.status_code != 200:
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'LLM API error: {resp.status_code}'})}\n\n"
+                        return
+
+                    async for line in resp.aiter_lines():
+                        if line.startswith("data: "):
+                            data = line[6:]
+                            if data == "[DONE]":
+                                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                                return
+                            try:
+                                chunk = json.loads(data)
+                                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield f"data: {json.dumps({'type': 'text', 'content': content})}\n\n"
+                            except json.JSONDecodeError:
+                                continue
+        except Exception as e:
+            logger.exception("MA stream error")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Sprint 3: 会话管理增强 ─────────────────────────────────────────────
