@@ -213,7 +213,7 @@ async def _stream_chat(
 
     # Stream from DeepSeek
     body = {
-        "model": "deepseek-chat",
+        "model": "deepseek-v4-pro",
         "messages": messages,
         "temperature": 0.3,
         "max_tokens": 2048,
@@ -662,11 +662,14 @@ async def api_ma_analyze(req: MAAnalysisRequest):
 
 请按照你的五维度分析框架，对收购方({acquirer_name})收购标的({req.target or '请从文档中识别'})进行{'全流程' if req.stage == 'full' else req.stage + '阶段'}分析。
 
-注意：
-1. 所有财务数据引用自上述表格
-2. 标的方信息引用自上述参考文档 (标注 [文档N])
-3. 估值时使用实际财务数据，不可编造
-4. 合规判断需具体，引用相关法规
+⚠️ **关键约束**：
+1. 收购方财务数据**必须**从上述 📊 表格中引用，标注具体报告期
+2. 标的方信息**必须**从上述 📚 参考文档中引用，标注 [文档N]
+3. **禁止编造任何数据** — 如果文档没有，标注"待补充"
+4. **绝对禁止**使用"模拟公司"、"假设"等词 — 这是真实的并购案
+5. 估值使用文档中真实业绩预测（如2025预计净利5200万等）
+6. 合规判断需具体，引用相关法规条款
+7. 如果某个分析维度数据不足，诚实说明而非编造
 """
 
     api_key = _resolve_api_key()
@@ -675,7 +678,7 @@ async def api_ma_analyze(req: MAAnalysisRequest):
 
     async def _stream():
         body = {
-            "model": "deepseek-chat",
+            "model": "deepseek-v4-pro",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"请对 {acquirer_name} 收购 {req.target or '标的公司'} 进行{'全流程M&A并购' if req.stage == 'full' else req.stage + '阶段'}分析。"},

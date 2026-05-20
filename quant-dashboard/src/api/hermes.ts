@@ -2,7 +2,7 @@
 
 import type { ChatRequest, SessionDetail, SessionSummary, SkillInfo, StreamEvent } from '../types/hermes'
 
-const BASE = '/api/v1/hermes'
+const BASE = 'http://localhost:20080/api/v1/hermes'
 const headers = () => ({
   Authorization: 'Basic ' + btoa('quant:quant123'),
   'Content-Type': 'application/json',
